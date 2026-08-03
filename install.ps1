@@ -20,12 +20,30 @@ if ($PSScriptRoot -and (Test-Path $Local)) {
 
 Write-Host "Installed to: $Target"
 
-if (-not (Get-Command ffmpeg -ErrorAction SilentlyContinue)) {
+$Missing = $false
+
+if (-not (Get-Command python -ErrorAction SilentlyContinue) -and
+    -not (Get-Command python3 -ErrorAction SilentlyContinue)) {
+    $Missing = $true
     Write-Host ""
-    Write-Host "NOTE: ffmpeg was not found - the script needs it for audio analysis."
-    Write-Host "Install it with: winget install Gyan.FFmpeg  (then restart Resolve)"
+    Write-Host "MISSING: Python 3 - without it Resolve hides .py scripts from the menu."
+    Write-Host "  Install it with: winget install Python.Python.3.12"
+    Write-Host "  (or download it from https://www.python.org/downloads/)"
+}
+
+if (-not (Get-Command ffmpeg -ErrorAction SilentlyContinue)) {
+    $Missing = $true
+    Write-Host ""
+    Write-Host "MISSING: ffmpeg - the script needs it for the audio analysis."
+    Write-Host "  Install it with: winget install Gyan.FFmpeg"
 }
 
 Write-Host ""
-Write-Host "Done! In DaVinci Resolve (Studio) open your synced multicam timeline"
-Write-Host "and run: Workspace -> Scripts -> Edit -> Podcast Multicam Editor"
+if ($Missing) {
+    Write-Host "Script installed. Install the missing pieces above, then restart"
+    Write-Host "DaVinci Resolve (Studio) and run:"
+} else {
+    Write-Host "Done! In DaVinci Resolve (Studio) open your synced multicam timeline"
+    Write-Host "and run:"
+}
+Write-Host "  Workspace -> Scripts -> Edit -> Podcast Multicam Editor"

@@ -36,13 +36,23 @@ microphone) and it builds a new, fully cut timeline:
 
 ## Requirements
 
-- **DaVinci Resolve Studio** (the free version does not support scripting)
-- **Python 3** installed and set up in Resolve
-  (`Preferences → System → General → External scripting using`)
-- **ffmpeg** for the audio analysis:
-  - macOS: `brew install ffmpeg`
-  - Windows: `winget install Gyan.FFmpeg` (restart Resolve afterwards)
-  - Linux: `sudo apt install ffmpeg` (or your distro's equivalent)
+Three things — nothing else is needed, even on a completely fresh machine:
+
+1. **DaVinci Resolve Studio** (the free version does not support scripting)
+2. **Python 3** — [download from python.org](https://www.python.org/downloads/)
+   and install with defaults. Without it Resolve hides `.py` scripts from
+   the menu. Restart Resolve after installing.
+3. **ffmpeg** (used for the audio analysis):
+   - **Windows**: `winget install Gyan.FFmpeg` in PowerShell (winget is
+     built into Windows 10/11), then restart Resolve
+   - **macOS**: `brew install ffmpeg` — or, if you don't use
+     [Homebrew](https://brew.sh), download a
+     [static build](https://evermeet.cx/ffmpeg/) and move the `ffmpeg`
+     file to `/usr/local/bin/`
+   - **Linux**: `sudo apt install ffmpeg` (or your distro's equivalent)
+
+The installer below checks both Python and ffmpeg and tells you exactly
+what's missing.
 
 ## Install
 

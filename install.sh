@@ -35,14 +35,37 @@ fi
 
 echo "Installed to: $TARGET_DIR/$NAME"
 
+MISSING=0
+
+if ! command -v python3 >/dev/null 2>&1 \
+        && [ ! -d "/Library/Frameworks/Python.framework" ]; then
+    MISSING=1
+    echo
+    echo "MISSING: Python 3 - without it Resolve hides .py scripts from the menu."
+    echo "  Download and install it from: https://www.python.org/downloads/"
+fi
+
 if ! command -v ffmpeg >/dev/null 2>&1 \
         && [ ! -x /opt/homebrew/bin/ffmpeg ] \
         && [ ! -x /usr/local/bin/ffmpeg ]; then
+    MISSING=1
     echo
-    echo "NOTE: ffmpeg was not found - the script needs it for audio analysis."
-    echo "Install it with: $FFMPEG_HINT"
+    echo "MISSING: ffmpeg - the script needs it for the audio analysis."
+    if [ "$(uname -s)" = "Darwin" ]; then
+        echo "  With Homebrew: brew install ffmpeg"
+        echo "  Without Homebrew: download https://evermeet.cx/ffmpeg/ and"
+        echo "  move the ffmpeg file to /usr/local/bin/"
+    else
+        echo "  Install it with: $FFMPEG_HINT"
+    fi
 fi
 
 echo
-echo "Done! In DaVinci Resolve (Studio) open your synced multicam timeline"
-echo "and run: Workspace -> Scripts -> Edit -> Podcast Multicam Editor"
+if [ "$MISSING" = "1" ]; then
+    echo "Script installed. Install the missing pieces above, then restart"
+    echo "DaVinci Resolve (Studio) and run:"
+else
+    echo "Done! In DaVinci Resolve (Studio) open your synced multicam timeline"
+    echo "and run:"
+fi
+echo "  Workspace -> Scripts -> Edit -> Podcast Multicam Editor"
