@@ -99,6 +99,14 @@ scripts folder:
 
 ## Troubleshooting
 
+- **The script doesn't appear in the menu** — in order of likelihood:
+  1. restart Resolve (the Scripts menu is scanned on startup);
+  2. look in the submenu: Workspace → Scripts → **Edit**;
+  3. install **Python 3** from [python.org](https://www.python.org/downloads/)
+     and restart Resolve — without Python, Resolve silently hides all `.py`
+     scripts from the menu;
+  4. make sure you run DaVinci Resolve **Studio** — the free edition does
+     not support the scripting API.
 - **"Found no reason to cut anywhere"** — check that each speaker really has
   their own named audio track, or raise the sensitivity. The dialog shows
   per-speaker diagnostics.
