@@ -49,14 +49,18 @@ microphone) and it builds a new, fully cut timeline:
 **macOS / Linux** — run in a terminal:
 
 ```bash
-curl -fsSL "https://raw.githubusercontent.com/taddak/podcast-multicam-editor/main/install.sh" | bash
+curl -fsSL https://raw.githubusercontent.com/taddak/podcast-multicam-editor/main/install.sh | bash
 ```
 
 **Windows** — run in PowerShell:
 
 ```powershell
-irm "https://raw.githubusercontent.com/taddak/podcast-multicam-editor/main/install.ps1" | iex
+irm https://raw.githubusercontent.com/taddak/podcast-multicam-editor/main/install.ps1 | iex
 ```
+
+> Tip: if you get `curl: (3) URL rejected`, your chat app replaced the
+> straight quotes with typographic ones — use the quote-free commands above
+> exactly as written.
 
 Or manually: download `Podcast Multicam Editor.py` and drop it into Resolve's
 scripts folder:
