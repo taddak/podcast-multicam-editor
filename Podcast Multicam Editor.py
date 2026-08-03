@@ -45,7 +45,7 @@ import warnings
 import threading
 import subprocess
 
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 
 # where releases live; the script checks this on start and can update itself
 UPDATE_URL = ("https://raw.githubusercontent.com/taddak/"
@@ -122,13 +122,6 @@ def user_config_path():
 
 
 CONFIG_PATH = user_config_path()
-
-# shift of the automatic threshold in dB (lower threshold = more sensitive)
-SENSITIVITY_PRESETS = {
-    "Low": 3.0,
-    "Medium": 0.0,
-    "High": -3.0,
-}
 
 WIDE_FREQ_PRESETS = {
     "Off": None,
@@ -410,7 +403,6 @@ HINT_CSS = "color: #999999;"
 CENTER = {"AlignHCenter": True, "AlignVCenter": True}
 
 SETTING_FIELDS = [
-    ("sensitivity", "Speech sensitivity"),
     ("minShot", "Min. shot length (s)"),
     ("interject", "Ignore sounds under (s)"),
     ("wideFreq", "Wide shot on monologue"),
@@ -420,7 +412,6 @@ SETTING_FIELDS = [
 
 def setting_options():
     return {
-        "sensitivity": list(SENSITIVITY_PRESETS.keys()),
         "minShot": ["1.0", "1.5", "2.0", "2.5", "3.0", "4.0"],
         "interject": ["0.2", "0.3", "0.4", "0.6", "1.0"],
         "wideFreq": list(WIDE_FREQ_PRESETS.keys()),
@@ -512,9 +503,9 @@ def show_main_window(audio_tracks, video_tracks, tl_start, tl_end, state):
 
     settings_rows = [
         UI.HGroup({"Weight": 0, "Spacing": 10},
-                  [setting_cell(cid, lbl) for cid, lbl in SETTING_FIELDS[:3]]),
+                  [setting_cell(cid, lbl) for cid, lbl in SETTING_FIELDS[:2]]),
         UI.HGroup({"Weight": 0, "Spacing": 10},
-                  [setting_cell(cid, lbl) for cid, lbl in SETTING_FIELDS[3:]]),
+                  [setting_cell(cid, lbl) for cid, lbl in SETTING_FIELDS[2:]]),
     ]
 
     # video tracks top-down, exactly like the timeline (V3, V2, V1)
@@ -905,8 +896,12 @@ def smooth_levels(vals, window=7):
     return out
 
 
-def compute_activity(levels, sensitivity, interject_s, names=None):
+def compute_activity(levels, interject_s, names=None):
     """Determines who speaks when, and who is dominant.
+
+    Thresholds are fully automatic (per-mic Otsu with bleed re-split),
+    so there is no sensitivity knob - the analysis adapts to quiet and
+    loud microphones by itself.
 
     Returns (activity, dominant, stats):
       activity[s][h] - speaker s talks in window h
@@ -915,7 +910,6 @@ def compute_activity(levels, sensitivity, interject_s, names=None):
     """
     n_speakers = len(levels)
     total_hops = len(levels[0]) if levels else 0
-    shift = SENSITIVITY_PRESETS[sensitivity]
     levels = [smooth_levels(lv) for lv in levels]
 
     def spk(s):
@@ -956,7 +950,7 @@ def compute_activity(levels, sensitivity, interject_s, names=None):
                     thr = res2[0]
         # keep the threshold reasonably close below the speech level -
         # Otsu can slide down to the noise on multimodal distributions
-        thr = min(max(thr + shift, p95 - 28.0, THRESHOLD_MIN), THRESHOLD_MAX)
+        thr = min(max(thr, p95 - 28.0, THRESHOLD_MIN), THRESHOLD_MAX)
         speech = [v for v in valid if v > thr]
         ref = percentile(sorted(speech), 90) if speech else percentile(valid, 95)
         thresholds.append(thr)
@@ -1438,8 +1432,6 @@ def main():
 
     state = {
         "settings": {
-            "sensitivity": valid("sensitivity", saved.get("sensitivity", ""),
-                                 "Medium"),
             "minShot": valid("minShot", saved.get("minShot", ""), "2.0"),
             "interject": valid("interject", saved.get("interject", ""), "0.3"),
             "wideFreq": valid("wideFreq", saved.get("wideFreq", ""),
@@ -1502,8 +1494,8 @@ def main():
     cfg.pop("audioMap", None)
     cfg.pop("videoMap", None)
     cfg.pop("speakers", None)
+    cfg.pop("sensitivity", None)
     cfg.update({
-        "sensitivity": settings["sensitivity"],
         "minShot": settings["minShot"],
         "interject": settings["interject"],
         "wideFreq": settings["wideFreq"],
@@ -1531,8 +1523,7 @@ def main():
         total_hops)
     progress_update("Detecting speech…")
     activity, dominant, stats = compute_activity(
-        levels, settings["sensitivity"], float(settings["interject"]),
-        speaker_names)
+        levels, float(settings["interject"]), speaker_names)
     for line in stats:
         print(line)
 
@@ -1546,8 +1537,9 @@ def main():
     if len(shots) <= 1:
         fail("Found no reason to cut anywhere - the result would be one "
              "camera for the whole runtime.\n\nDiagnostics:\n{}\n\nCheck "
-             "the speaker names on the audio tracks and try a higher "
-             "speech sensitivity.".format("\n".join(stats)))
+             "that every speaker has their own named audio track and that "
+             "the microphones are not recorded extremely low."
+             .format("\n".join(stats)))
 
     media_pool = project.GetMediaPool()
     new_tl, n_clips, skipped = build_timeline(

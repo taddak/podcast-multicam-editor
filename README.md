@@ -99,9 +99,11 @@ scripts folder:
 
 ### Settings
 
+Speech detection has no knobs — thresholds are computed automatically per
+microphone and adapt to quiet and loud voices.
+
 | Setting | Meaning |
 |---|---|
-| Speech sensitivity | how easily quiet speech is detected (Low / Medium / High) |
 | Min. shot length | no shot will be shorter than this |
 | Ignore sounds under | coughs and short noises below this length don't cut |
 | Wide shot on monologue | how often to break up long monologues with the wide |
@@ -118,8 +120,8 @@ scripts folder:
   4. make sure you run DaVinci Resolve **Studio** — the free edition does
      not support the scripting API.
 - **"Found no reason to cut anywhere"** — check that each speaker really has
-  their own named audio track, or raise the sensitivity. The dialog shows
-  per-speaker diagnostics.
+  their own named audio track. The dialog shows per-speaker diagnostics
+  (detected speech levels and talk time).
 - **A speaker is reported as mic bleed** — their mic is much quieter than
   the others and almost only active when someone else talks; check the
   mapping or their recording level.

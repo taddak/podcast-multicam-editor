@@ -52,7 +52,7 @@ NAMES = {1: "cam1(A)", 2: "cam2(B)", 3: "wide"}
 print("=== Test 1: conversation with bleed, wide available ===")
 segs = [(0, 30, {0}), (30, 60, {1}), (60, 70, {0, 1}), (75, 120, {0})]
 levels = synth_levels(120, segs)
-activity, dominant, stats = ns["compute_activity"](levels, "Medium", 0.3)
+activity, dominant, stats = ns["compute_activity"](levels, 0.3)
 for s in stats:
     print(" ", s)
 pctA = 100 * sum(activity[0]) / len(activity[0])
@@ -89,7 +89,7 @@ print("  OK")
 print("=== Test 3: talkative speaker (85 % of time) - old bug ===")
 segs = [(0, 85, {0}), (88, 100, {1})]
 levels = synth_levels(100, segs)
-activity, dominant, stats = ns["compute_activity"](levels, "Medium", 0.3)
+activity, dominant, stats = ns["compute_activity"](levels, 0.3)
 for s in stats:
     print(" ", s)
 pctA = 100 * sum(activity[0]) / len(activity[0])
@@ -104,7 +104,7 @@ print("  OK")
 
 print("=== Test 4: bleed-only track gets dropped ===")
 levels = synth_levels(60, [(0, 25, {0}), (30, 60, {0})])
-activity, dominant, stats = ns["compute_activity"](levels, "Medium", 0.3)
+activity, dominant, stats = ns["compute_activity"](levels, 0.3)
 for s in stats:
     print(" ", s)
 pctA = 100 * sum(activity[0]) / len(activity[0])
@@ -122,7 +122,7 @@ while t < 120:
     t += dur
     who = 1 - who
 levels = synth_levels(120, segs)
-activity, dominant, stats = ns["compute_activity"](levels, "Medium", 0.3)
+activity, dominant, stats = ns["compute_activity"](levels, 0.3)
 for s in stats:
     print(" ", s)
 shots = ns["plan_shots"](activity, dominant, [CAM1, CAM2, WIDE], WIDE,
@@ -142,7 +142,7 @@ print("  OK ({} turns -> {} shots, {}/{} cuts exact)".format(
 print("=== Test 6: early cut into the pause ===")
 # A stops at 30 s, 3 s pause, B starts at 33 s -> cut should be ~31.8 s
 levels = synth_levels(60, [(0, 30, {0}), (33, 60, {1})])
-activity, dominant, stats = ns["compute_activity"](levels, "Medium", 0.3)
+activity, dominant, stats = ns["compute_activity"](levels, 0.3)
 shots = ns["plan_shots"](activity, dominant, [CAM1, CAM2], None,
                          len(activity[0]), 2.0, None)
 d = describe(shots, NAMES)
@@ -154,7 +154,7 @@ assert cut <= 32.2, "cut is not ahead of B's speech (%.1f s)" % cut
 print("  OK (B starts ~33 s, camera on him at %.1f s)" % cut)
 
 levels = synth_levels(60, [(0, 30, {0}), (30, 60, {1})])
-activity, dominant, stats = ns["compute_activity"](levels, "Medium", 0.3)
+activity, dominant, stats = ns["compute_activity"](levels, 0.3)
 shots = ns["plan_shots"](activity, dominant, [CAM1, CAM2], None,
                          len(activity[0]), 2.0, None)
 d = describe(shots, NAMES)
@@ -194,7 +194,7 @@ names6[7] = "wide"
 t0 = time.time()
 levels = synth_levels(TOTAL_S, segs, N_SPK)
 t0 = time.time()
-activity, dominant, stats = ns["compute_activity"](levels, "Medium", 0.3)
+activity, dominant, stats = ns["compute_activity"](levels, 0.3)
 t_act = time.time() - t0
 for s in stats:
     print(" ", s)
@@ -223,7 +223,7 @@ print("  OK")
 print("=== Test 8: short overlap -> reaction close-up, not wide ===")
 # A talks 0-40, B talks over him 20-22 -> cut to B's close-up, no wide
 levels = synth_levels(40, [(0, 20, {0}), (20, 22, {0, 1}), (22, 40, {0})])
-activity, dominant, stats = ns["compute_activity"](levels, "Medium", 0.3)
+activity, dominant, stats = ns["compute_activity"](levels, 0.3)
 shots = ns["plan_shots"](activity, dominant, [CAM1, CAM2, WIDE], WIDE,
                          len(activity[0]), 2.0, None)
 d = describe(shots, NAMES)
@@ -251,7 +251,7 @@ for h in range(n):
         lv1.append(-44.0 + random.uniform(-3, 3))   # loud bleed of Sp2
         lv2.append(-23.0 + random.uniform(-3, 3))
 levels = [lv1, lv2]
-activity, dominant, stats = ns["compute_activity"](levels, "Medium", 0.3)
+activity, dominant, stats = ns["compute_activity"](levels, 0.3)
 for s in stats:
     print(" ", s)
 pct1 = 100 * sum(activity[0]) / n

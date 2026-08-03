@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.0 (2026-08-03)
+
+- Removed the "Speech sensitivity" setting — thresholds have been fully
+  automatic (per-mic Otsu with bleed re-split) since 1.0.0 and the knob
+  only confused people. The analysis adapts to quiet and loud microphones
+  by itself.
+
 ## 1.0.0 (2026-07-19)
 
 First public release.
