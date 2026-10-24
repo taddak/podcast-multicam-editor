@@ -83,6 +83,7 @@ source .venv/bin/activate                   # Windows: .\.venv\Scripts\Activate.
 python -m trader keys                       # API klíče se zadávají skrytě, uloží se jen do soukromého .env
 python -m trader check                      # bezpečnostní kontrola, data z burzy, ověření klíčů
 python -m trader backtest --days 30         # pravidlová strategie na historii (zdarma)
+python -m trader backtest --window-hours 48 --timeframe 15m   # přehraj posledních 48 h a porovnej s trhem
 python -m trader run --name paper-week      # týden na papíře
 python -m trader run --live --name live-week1 --capital 10   # ostrý týden
 python -m trader report --name live-week1   # průběžný nebo konečný výsledek
@@ -192,8 +193,9 @@ Podrobnosti: [Monthly API credits for Max and Team plans](https://support.claude
   - Od 15. 2. 2025 je příjem z prodeje kryptoaktiv **osvobozený od daně**, pokud **úhrn příjmů z prodejů za rok nepřesáhne 100 000 Kč**, nebo pokud jsi kryptoaktivum držel déle než 3 roky.
   - Počítají se **hrubé příjmy z prodejů (ne zisk)** ze všech tvých prodejů kryptoměn za rok.
   - **Stablecoiny** (elektronické peněžní tokeny) osvobození nemají, a proto je agent nemá povolené.
-  - Týden s 10 € znamená řádově stovky eur objemu prodejů, tedy hluboko pod limitem. Pokud letos jinde neprodáváš krypto za víc, nic se nepřiznává.
-  - `report` ukazuje objem prodejů (řádek „sales … gross proceeds“), abys to měl přehledně.
+  - Týden s 10 € znamená řádově stovky eur objemu prodejů, tedy hluboko pod limitem. Pokud letos jinde neprodáváš krypto za víc, nic se nepřiznává. Osvobozené příjmy se do přiznání nepíšou.
+  - **Pozor na obrat při delším běhu.** Limit se počítá z objemu prodejů, ne ze zisku. Agent točí stejných 10 € pořád dokola, takže by za celý rok mohl prodat za víc než 100 000 Kč, i když by skoro nic nevydělal. Při překročení limitu padá osvobození pro všechny prodeje krypta za daný rok, ne jen pro část nad limitem. Pak se zisk (příjmy minus nákupní ceny) daní jako ostatní příjem.
+  - Objem prodejů ukazuje `report` (řádek „sales … gross proceeds“). S `--eur-czk 24.3` (aktuální kurz) ho přepočte na koruny a ukáže, kolik procent limitu máš vyčerpáno. Deník (`journal.jsonl`) si nech jako doklad.
 - **Hlášení burz:** podle směrnice DAC8 sbírají burzy od 1. 1. 2026 údaje o transakcích klientů a předávají je daňovým správám. Na tvých povinnostech to nic nemění.
 - **Claude:** přes API klíč je automatizace v souladu s podmínkami Anthropicu (viz výše).
 
@@ -206,11 +208,11 @@ pip install --require-hashes -r requirements-dev.lock    # setup skript to děl�
 python -m pytest -q
 ```
 
-Testy (38) pokrývají:
+Testy (40) pokrývají:
 
 - indikátory, účetnictví a risk manager,
 - parsování plnění z burzy,
-- celý běh agenta na syntetických datech, pokračování po restartu, kill switch, nouzové tlačítko a backtest,
+- celý běh agenta na syntetických datech, pokračování po restartu, kill switch, nouzové tlačítko, backtest a přehrání posledních 48 h na 15minutových svíčkách včetně porovnání s trhem,
 - živou cestu proti falešnému ccxt klientovi,
 - Claude mozek proti falešnému API (smyčka nástrojů, parsování, rozpočet, odmítnutí),
 - bezpečnost: maskování klíčů v logu a deníku, oprávnění `.env`, `.env` v gitu, blokované výběry, pojistku kapitálu, filtr řídicích znaků a bezpečné zadávání klíčů.

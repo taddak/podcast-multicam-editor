@@ -4,7 +4,7 @@ from types import SimpleNamespace
 import pytest
 
 from trader.agent import TradingAgent
-from trader.backtest import run_backtest
+from trader.backtest import format_comparison, market_reality, run_backtest
 from trader.brains.base import Decision, TradeIntent
 from trader.brains.claude import FALLBACK_BETA, BudgetExceeded, ClaudeBrain, render_context
 from trader.brains.rules import RuleBrain
@@ -135,8 +135,36 @@ def test_close_all_sells_and_finishes(cfg, candles):
 def test_backtest_summary(cfg, candles):
     summary = run_backtest(cfg, candles, "1h", name="bt")
     assert summary["days"] > 10
-    assert "buy_and_hold_pct" in summary
+    assert set(summary["reality"]) == set(candles)
     assert summary["final_equity"] > 0
+    assert "What the market really did" in format_comparison(summary)
+
+
+def test_replay_last_48h_on_15m_candles(cfg):
+    from conftest import make_candles
+    quarter = 900_000
+    candles = {s: make_candles(4 * (200 + 48), p, d, 0.004, seed, tf_ms=quarter)
+               for s, p, d, seed in [("AAA/EUR", 100.0, 0.0006, 7), ("BBB/EUR", 3.0, -0.0004, 8)]}
+    cfg.exchange.symbols = list(candles)
+    summary = run_backtest(cfg, candles, "15m", name="bt48", hours=48)
+    assert summary["window_end"] - summary["window_start"] == pytest.approx(48 * 3600)
+    assert summary["stopped_reason"] == "end of run"
+    decisions = Journal(summary["run_dir"]).events({"decision"})
+    assert decisions, "1h snapshots must be built from resampled 15m candles"
+    for symbol, r in summary["reality"].items():
+        rows = candles[symbol]
+        assert r["end"] == rows[-1][4]
+        assert r["best_trade_pct"] >= max(r["change_pct"], 0.0)
+
+
+def test_market_reality_numbers():
+    tf = 3_600_000
+    rows = [[0, 10, 10, 10, 10, 1], [tf, 10, 12, 8, 9, 1], [2 * tf, 9, 15, 9, 11, 1]]
+    r = market_reality({"X/EUR": rows}, tf, start=1 * 3600, end=3 * 3600)["X/EUR"]
+    assert r["start"] == 10 and r["end"] == 11
+    assert r["change_pct"] == pytest.approx(10.0)
+    assert r["low"] == 8 and r["high"] == 15
+    assert r["best_trade_pct"] == pytest.approx((15 / 8 - 1) * 100)  # buy the 8 low, sell the later 15 high
 
 
 # ---- Claude brain with a fake API client ----------------------------------------------------------------

@@ -352,7 +352,7 @@ class SimExchange(Exchange):
 
     def first_tradable_time(self, warmup_candles: int) -> float:
         """Earliest time (s) at which every symbol has `warmup_candles` closed candles."""
-        latest = max(self._ts[s][min(warmup_candles, len(self._ts[s]) - 1)] for s in self.candles)
+        latest = max(self._ts[s][min(max(warmup_candles - 1, 0), len(self._ts[s]) - 1)] for s in self.candles)
         return (latest + self.tf_ms) / 1000.0
 
     def last_time(self) -> float:

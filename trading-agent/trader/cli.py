@@ -268,17 +268,24 @@ def cmd_check(cfg: Config, a: argparse.Namespace) -> int:
 
 
 def cmd_backtest(cfg: Config, a: argparse.Namespace) -> int:
-    from .backtest import fetch_history, load_history, run_backtest
+    import ccxt
+
+    from .backtest import fetch_history, format_comparison, load_history, run_backtest
     from .brains import build_brain
     from .report import format_report, summarize
 
     _setup_logging(a.verbose)
     data_dir = Path(a.data_dir)
+    window_hours = a.window_hours if a.window_hours else a.days * 24
     if a.offline:
         candles = load_history(data_dir, cfg.exchange.id, cfg.exchange.symbols, a.timeframe)
     else:
-        candles = fetch_history(cfg.exchange.id, cfg.exchange.symbols, a.timeframe, a.days, data_dir,
-                                cfg.exchange.options)
+        try:
+            candles = fetch_history(cfg.exchange.id, cfg.exchange.symbols, a.timeframe, window_hours, data_dir,
+                                    cfg.exchange.options)
+        except ccxt.BaseError as e:
+            print(f"cannot download history from {cfg.exchange.id}: {e}")
+            return 1
     if not candles:
         print("no candle data")
         return 1
@@ -289,9 +296,10 @@ def cmd_backtest(cfg: Config, a: argparse.Namespace) -> int:
               "add --yes-llm-cost to proceed (the budget cap still applies).")
         return 2
     logging.getLogger("trader").setLevel(logging.WARNING if not a.verbose else logging.DEBUG)
-    summary = run_backtest(cfg, candles, a.timeframe, build_brain(cfg), a.min_order, a.name)
+    summary = run_backtest(cfg, candles, a.timeframe, build_brain(cfg), a.min_order, a.name, hours=window_hours)
     print(format_report(summarize(summary["run_dir"]), cfg.exchange.quote))
-    print(f"  buy & hold   {summary['buy_and_hold_pct']:+.2f} % (equal-weight basket, same {summary['days']:.1f} days)")
+    print()
+    print(format_comparison(summary, cfg.exchange.quote))
     return 0
 
 
@@ -301,6 +309,10 @@ def cmd_report(cfg: Config, a: argparse.Namespace) -> int:
     run_dir = cfg.run_dir
     s = summarize(run_dir)
     print(format_report(s, cfg.exchange.quote))
+    if a.eur_czk:
+        czk = s["sale_proceeds"] * a.eur_czk
+        print(f"  tax check    sale proceeds ~{czk:,.0f} CZK = {czk / 100_000 * 100:.1f} % of the 100,000 CZK "
+              "yearly exemption (add your other crypto sales this year)")
     if a.csv:
         path = run_dir / "equity.csv"
         write_equity_csv(s, path)
@@ -331,15 +343,18 @@ def main(argv: list[str] | None = None) -> int:
     p = sub.add_parser("report", help="summarize a run (finished or in progress)")
     _overrides(p)
     p.add_argument("--csv", action="store_true", help="also write equity.csv into the run folder")
+    p.add_argument("--eur-czk", type=float, help="EUR/CZK rate, e.g. 24.3: shows sale proceeds against the CZ tax limit")
 
     p = sub.add_parser("close-all", help="panic button: sell all positions of a run and end it")
     _overrides(p)
     p.add_argument("--live", action="store_true", help="required for a live run")
 
-    p = sub.add_parser("backtest", help="replay history through the agent (rule brain by default)")
+    p = sub.add_parser("backtest", help="replay recent history through the agent and compare with the market")
     _overrides(p)
-    p.add_argument("--days", type=float, default=30)
-    p.add_argument("--timeframe", default="1h", choices=["15m", "1h", "4h"])
+    p.add_argument("--days", type=float, default=30, help="window length in days (default 30)")
+    p.add_argument("--window-hours", type=float, help="window length in hours, e.g. 48 (overrides --days)")
+    p.add_argument("--timeframe", default="1h", choices=["15m", "1h", "4h"],
+                   help="candle size; 15m checks stops 4x per hour (better for short windows)")
     p.add_argument("--data-dir", default="data")
     p.add_argument("--offline", action="store_true", help="use cached CSV files only")
     p.add_argument("--min-order", type=float, default=5.0, help="simulated exchange minimum order (quote)")

@@ -70,10 +70,29 @@ Pak v [Console](https://platform.claude.com):
 
 Agent má navíc vlastní strop `llm_budget_usd` (5 $ na běh).
 
-## 3. Kontrola a týden na papíře (bez burzy, bez rizika)
+## 3. Kontrola, přehrání posledních 48 hodin a týden na papíře (bez burzy, bez rizika)
 
 ```bash
 python -m trader check --brain rules       # bezpečnostní kontrola + tabulka trhu z Bitvavo
+```
+
+Jak by agent obchodoval posledních 48 hodin a co mezitím reálně udělal trh:
+
+```bash
+python -m trader backtest --window-hours 48 --timeframe 15m                              # pravidla, zdarma
+python -m trader backtest --window-hours 48 --timeframe 15m --brain claude --yes-llm-cost  # Claude, cca 1–2 $
+```
+
+Stáhne ze stejné burzy skutečné 15minutové svíčky: posledních 48 hodin plus 200 hodin historie předtím, aby měl agent z čeho počítat ukazatele. Agent pak obchoduje krok po kroku, v každém okamžiku jen s daty, která by tehdy znal. Na konci vypíše:
+
+- obchody agenta,
+- co skutečně udělal každý coin (změna, rozpětí, nejlepší možný obchod s dokonalou znalostí budoucnosti),
+- výsledek „koupit a držet“,
+- rozdíl mezi agentem a trhem.
+
+Pak týden na papíře:
+
+```bash
 python -m trader run --name paper-week     # týden se skutečnými cenami, ale simulovanými obchody
 ```
 
