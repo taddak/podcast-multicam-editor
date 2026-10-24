@@ -49,6 +49,7 @@ def summarize(run_dir: str | Path) -> dict:
         "best_trade_pct": max((t.pnl_pct for t in p.closed), default=0.0),
         "worst_trade_pct": min((t.pnl_pct for t in p.closed), default=0.0),
         "realized_pnl": p.realized_pnl,
+        "sale_proceeds": sum(t.proceeds for t in p.closed),
         "fees_paid": p.fees_paid,
         "llm_cost_usd": p.llm_cost_usd,
         "decisions": len(decisions),
@@ -69,6 +70,8 @@ def format_report(s: dict, quote: str = "EUR") -> str:
         f"  trades       {s['closed_trades']} closed, win rate {s['win_rate_pct']:.0f} %, "
         f"best {s['best_trade_pct']:+.2f} %, worst {s['worst_trade_pct']:+.2f} %",
         f"  realized P&L {s['realized_pnl']:+.2f} {quote}, fees {s['fees_paid']:.2f} {quote}",
+        f"  sales        {s['sale_proceeds']:.2f} {quote} gross proceeds "
+        f"(CZ: crypto sale proceeds up to 100,000 CZK per year are tax exempt)",
         f"  decisions    {s['decisions']}, rejected orders {s['rejected_orders']}, errors {s['errors']}",
     ]
     if s["llm_cost_usd"]:

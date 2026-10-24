@@ -23,9 +23,33 @@ TF_SECONDS = {"1m": 60, "5m": 300, "15m": 900, "30m": 1800, "1h": 3600, "4h": 14
 # Errors worth retrying on the next tick instead of stopping the agent.
 TRANSIENT_ERRORS = (ccxt.NetworkError, ccxt.RateLimitExceeded, ccxt.ExchangeNotAvailable)
 
+# ccxt methods that move money off the account or add leverage. The agent never needs them; they are
+# replaced on the client so that not even a bug (or a key with too many rights) can call them.
+BLOCKED_METHODS = (
+    "withdraw", "transfer", "create_deposit_address", "set_leverage", "set_margin_mode",
+    "borrow_margin", "borrow_cross_margin", "borrow_isolated_margin", "add_margin", "reduce_margin",
+)
+
 
 class OrderError(Exception):
     pass
+
+
+class BlockedOperation(Exception):
+    pass
+
+
+def _block_dangerous_methods(client) -> None:
+    def blocked(name):
+        def _raise(*args, **kwargs):
+            raise BlockedOperation(f"{name} is disabled in this agent")
+        return _raise
+
+    for name in BLOCKED_METHODS:
+        camel = name.split("_")[0] + "".join(part.title() for part in name.split("_")[1:])
+        for attr in {name, camel}:
+            if hasattr(client, attr):
+                setattr(client, attr, blocked(attr))
 
 
 @dataclass
@@ -134,6 +158,7 @@ class CcxtExchange(Exchange):
         if options:
             params["options"] = options
         self.client = getattr(ccxt, exchange_id)(params)
+        _block_dangerous_methods(self.client)
         self.name = exchange_id
         self.quote = quote
         self.taker_fee_override = taker_fee
@@ -201,6 +226,8 @@ class CcxtExchange(Exchange):
         return float((balance.get("free") or {}).get(currency) or 0.0)
 
     def buy(self, symbol: str, cost: float) -> Fill:
+        if symbol not in self.markets:  # only the spot markets loaded from the configured list
+            raise OrderError(f"{symbol} is not an allowed market")
         c = self.client
         cost = _floor(cost, 2)
         if c.has.get("createMarketBuyOrderWithCost"):
@@ -215,6 +242,8 @@ class CcxtExchange(Exchange):
         return self._fill_from_order(symbol, "buy", self._settle(symbol, order))
 
     def sell(self, symbol: str, amount: float) -> Fill:
+        if symbol not in self.markets:
+            raise OrderError(f"{symbol} is not an allowed market")
         amount = self.amount_to_precision(symbol, amount)
         if amount <= 0:
             raise OrderError(f"sell amount for {symbol} rounds to zero")

@@ -112,6 +112,26 @@ def test_kill_switch_liquidates(cfg, candles):
     assert not agent.portfolio.positions
 
 
+def test_close_all_sells_and_finishes(cfg, candles):
+    clock, sim = sim_setup(cfg, candles, hours=48)
+    cfg.run.close_all_at_end = False
+    buy = Decision(intents=[TradeIntent("buy", "AAA/EUR", amount_quote=10.0, stop_loss_pct=8)], source="s")
+    agent = TradingAgent(cfg, sim, ScriptedBrain([buy]), Journal(cfg.run_dir), clock)
+    agent.start()
+    agent.tick(clock.now())
+    assert agent.portfolio.positions
+
+    panic = TradingAgent(cfg, sim, ScriptedBrain([]), Journal(cfg.run_dir), clock)
+    panic.start()
+    panic.stopped_reason = "closed manually"
+    summary = panic.finish(force_close=True)
+    assert not panic.portfolio.positions
+    assert panic.portfolio.closed[-1].exit_reason == "closed_manually"
+    assert summary["stopped_reason"] == "closed manually"
+    with pytest.raises(RuntimeError, match="already finished"):
+        TradingAgent(cfg, sim, ScriptedBrain([]), Journal(cfg.run_dir), clock).start()
+
+
 def test_backtest_summary(cfg, candles):
     summary = run_backtest(cfg, candles, "1h", name="bt")
     assert summary["days"] > 10

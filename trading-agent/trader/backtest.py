@@ -107,7 +107,7 @@ def run_backtest(cfg: Config, candles: dict[str, list[list[float]]], timeframe: 
     cfg.run.max_decision_interval_minutes = max(cfg.run.max_decision_interval_minutes, tf_minutes)
     cfg.exchange.symbols = [s for s in cfg.exchange.symbols if s in candles] or sorted(candles)
 
-    journal = Journal(Path(cfg.run.runs_dir) / cfg.run.name)
+    journal = Journal(cfg.run_dir)
     brain = brain or RuleBrain(cfg.risk.max_positions, cfg.risk.min_stop_loss_pct, cfg.risk.max_stop_loss_pct)
     agent = TradingAgent(cfg, sim, brain, journal, clock)
     summary = agent.run()

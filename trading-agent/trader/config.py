@@ -12,6 +12,10 @@ import tomllib
 from dataclasses import dataclass, field, fields
 from pathlib import Path
 
+from .security import PROJECT_DIR, SECRET_KEYS
+
+STABLECOINS = {"USDT", "USDC", "EURC", "EURT", "EURI", "EURQ", "EURR", "DAI", "PYUSD", "FDUSD", "TUSD", "USDG", "RLUSD", "USDE"}
+
 DEFAULT_SYMBOLS = [
     "BTC/EUR", "ETH/EUR", "SOL/EUR", "XRP/EUR", "ADA/EUR", "DOGE/EUR",
     "LINK/EUR", "AVAX/EUR", "DOT/EUR", "LTC/EUR", "SUI/EUR", "TRX/EUR",
@@ -31,6 +35,7 @@ class RunConfig:
     equity_log_minutes: int = 15
     close_all_at_end: bool = True
     runs_dir: str = "runs"
+    max_live_capital: float = 50.0           # live mode refuses a larger capital (guards against typos)
 
 
 @dataclass
@@ -82,7 +87,10 @@ class Config:
 
     @property
     def run_dir(self) -> Path:
-        return Path(self.run.runs_dir) / self.run.name
+        base = Path(self.run.runs_dir)
+        if not base.is_absolute():
+            base = PROJECT_DIR / base  # same place no matter which directory the command runs from
+        return base / self.run.name
 
 
 def _apply(section: object, values: dict, where: str) -> None:
@@ -118,15 +126,24 @@ def validate(cfg: Config) -> None:
     for symbol in cfg.exchange.symbols:
         if not symbol.endswith("/" + cfg.exchange.quote):
             raise ValueError(f"symbol {symbol} does not use quote currency {cfg.exchange.quote}")
+        if symbol.split("/")[0] in STABLECOINS:
+            # Stablecoins (e-money tokens) fall outside the Czech 100,000 CZK crypto tax exemption.
+            raise ValueError(f"{symbol}: trading stablecoins is disabled")
     if cfg.risk.max_positions < 1:
         raise ValueError("risk.max_positions must be >= 1")
 
 
-def load_dotenv(path: str | Path = ".env") -> None:
-    """Minimal .env loader: KEY=VALUE lines; existing environment variables win."""
+def load_dotenv(path: str | Path) -> list[str]:
+    """Load the secret variables from a .env file; existing environment variables win.
+
+    Only the allow-listed key names are read, so a .env file cannot redirect traffic
+    (e.g. ANTHROPIC_BASE_URL) or change anything else about the process. Returns the
+    names of ignored keys.
+    """
     p = Path(path)
+    ignored: list[str] = []
     if not p.is_file():
-        return
+        return ignored
     for line in p.read_text(encoding="utf-8").splitlines():
         line = line.strip()
         if not line or line.startswith("#") or "=" not in line:
@@ -134,7 +151,12 @@ def load_dotenv(path: str | Path = ".env") -> None:
         key, value = line.split("=", 1)
         key = key.strip().removeprefix("export ").strip()
         value = value.strip().strip('"').strip("'")
-        os.environ.setdefault(key, value)
+        if key not in SECRET_KEYS:
+            ignored.append(key)
+            continue
+        if value:
+            os.environ.setdefault(key, value)
+    return ignored
 
 
 def exchange_credentials() -> dict:

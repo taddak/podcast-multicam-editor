@@ -187,10 +187,10 @@ class TradingAgent:
             raise
         return self.finish()
 
-    def finish(self) -> dict:
+    def finish(self, force_close: bool = False) -> dict:
         now = self.clock.now()
-        if self.cfg.run.close_all_at_end and self.portfolio.positions:
-            self.liquidate(now, "end_of_run")
+        if (self.cfg.run.close_all_at_end or force_close) and self.portfolio.positions:
+            self.liquidate(now, "closed_manually" if force_close else "end_of_run")
         equity = self.equity()
         p = self.portfolio
         summary = {

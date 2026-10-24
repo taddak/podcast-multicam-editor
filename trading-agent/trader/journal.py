@@ -8,6 +8,7 @@ import os
 from pathlib import Path
 
 from .clock import fmt_ts
+from .security import redact
 
 
 class Journal:
@@ -20,7 +21,7 @@ class Journal:
     def log(self, kind: str, ts: float, **data) -> dict:
         event = {"ts": ts, "time": fmt_ts(ts), "kind": kind, **data}
         with self.path.open("a", encoding="utf-8") as fh:
-            fh.write(json.dumps(event, default=str, ensure_ascii=False) + "\n")
+            fh.write(redact(json.dumps(event, default=str, ensure_ascii=False)) + "\n")
         return event
 
     def events(self, kinds: set[str] | None = None) -> list[dict]:
