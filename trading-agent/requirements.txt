@@ -1,0 +1,2 @@
+ccxt==4.5.90
+anthropic==2.3.0

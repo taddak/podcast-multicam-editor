@@ -1,0 +1,47 @@
+# Copy to config.toml and adjust. Every key is optional; missing keys use the defaults.
+# API keys do NOT belong here: put them in .env (see .env.example).
+
+[run]
+mode = "paper"                    # "paper" = real prices, simulated orders; "live" needs --live on the command line
+name = "week1"                    # folder under runs/; run the same name again to resume after a restart
+capital = 10.0                    # EUR the agent may use (it never touches more, even if the account holds more)
+duration_hours = 168              # one week
+tick_seconds = 60                 # how often stops and take-profits are checked
+decision_interval_minutes = 120   # default gap between decisions; Claude chooses its own within the range below
+min_decision_interval_minutes = 30
+max_decision_interval_minutes = 360
+close_all_at_end = true           # sell everything when the week is over
+
+[exchange]
+id = "bitvavo"                    # bitvavo | kraken | myokx (OKX EEA) | bybiteu | coinbase | any ccxt id
+quote = "EUR"
+symbols = ["BTC/EUR", "ETH/EUR", "SOL/EUR", "XRP/EUR", "ADA/EUR", "DOGE/EUR",
+           "LINK/EUR", "AVAX/EUR", "DOT/EUR", "LTC/EUR", "SUI/EUR", "TRX/EUR"]
+min_quote_volume_24h = 250000     # skip markets with less 24h volume (EUR)
+max_spread_pct = 0.35
+# taker_fee = 0.0025              # override the fee ccxt reports, as a fraction (0.0025 = 0.25 %)
+paper_slippage_pct = 0.05
+
+[risk]
+max_positions = 2
+max_position_pct = 100            # share of equity one position may take
+min_order_buffer = 1.3            # positions start at >= 1.3x the exchange minimum so they stay sellable
+default_stop_loss_pct = 3.0
+min_stop_loss_pct = 1.0
+max_stop_loss_pct = 8.0
+default_take_profit_pct = 6.0
+max_take_profit_pct = 40.0
+trailing_stop = true
+daily_loss_limit_pct = 8          # no new entries for the rest of the UTC day
+max_drawdown_pct = 25             # kill switch: sell everything and stop
+max_trades_per_day = 8
+symbol_cooldown_minutes = 120
+
+[brain]
+type = "claude"                   # "claude" or "rules" (free, deterministic trend following)
+model = "claude-opus-5-5"
+effort = "medium"                 # low | medium | high | xhigh | max
+max_tool_rounds = 6
+llm_budget_usd = 5.0              # hard cap on Claude API spend for the whole run
+web_search = false                # let Claude look up news (about $0.01 per search plus tokens)
+fallback_to_rules = true          # when the budget is spent, the rule brain continues
